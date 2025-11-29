@@ -30,6 +30,7 @@ class SimulationOutputs:
     state: spikeOFC_model.SpikeOFCState
     spike_history: Optional[np.ndarray] = None
     decoded_history: Optional[np.ndarray] = None
+    true_history: Optional[np.ndarray] = None
 
 
 def simulate(
@@ -55,12 +56,14 @@ def simulate(
         logs["kalman_innovation"] = []
     spike_buffer: List[np.ndarray] | None = [] if config.record_spikes else None
     decode_buffer: List[np.ndarray] = []
+    true_buffer: List[np.ndarray] = []
     delay_line.reset()
     delay_line.push(estimator_state.r)
 
     for _ in range(steps):
         x = plant.step(x, config.dt, rng)
         y = plant.observe(x, rng)
+        true_buffer.append(x.copy())
         outputs = model.step(
             estimator_state,
             y,
@@ -100,11 +103,13 @@ def simulate(
     if spike_buffer is not None and len(spike_buffer) > 0:
         spike_history = np.stack(spike_buffer, axis=0)
     decoded_history = np.stack(decode_buffer, axis=0) if decode_buffer else None
+    true_history = np.stack(true_buffer, axis=0) if true_buffer else None
 
     return SimulationOutputs(
         logs=logs,
         state=estimator_state,
         spike_history=spike_history,
         decoded_history=decoded_history,
+        true_history=true_history,
     )
 

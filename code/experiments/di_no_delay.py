@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
+from scipy import linalg as la
 
 from src.spikeOFC import baselines, config as cfg, delay, lti, loop, scn_core, spikeOFC_model
 
@@ -21,14 +22,49 @@ def _make_rng(seed: int):
     return default_rng(seed)
 
 
+def _stationary_kalman_gain(A_d: np.ndarray, C: np.ndarray, Q_d: np.ndarray, R: np.ndarray) -> np.ndarray:
+    """Solve discrete Riccati for steady-state Kalman gain."""
+    P = la.solve_discrete_are(A_d.T, C.T, Q_d, R)
+    S = C @ P @ C.T + R
+    return P @ C.T @ np.linalg.inv(S)
+
+
 def build_components(run_cfg: cfg.RunConfig):
     rng = _make_rng(run_cfg.seed)
     D = scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
     Omega_f = scn_core.fast_matrix(D)
-    Omega_s = np.zeros((run_cfg.N, run_cfg.N))
+    plant = lti.make_double_integrator(
+        dt=run_cfg.dt,
+        sigma_process=0.05,
+        sigma_measure=0.05,
+    )
+    tau_steps = max(0, int(round(run_cfg.tau / run_cfg.dt)))
+
+    predictor_matrix = plant.A + np.eye(run_cfg.K)
+    Omega_s = D.T @ predictor_matrix @ D
+
     W_y = run_cfg.init_wy_scale * rng.standard_normal((run_cfg.Q, run_cfg.N))
     G = run_cfg.init_g_scale * rng.standard_normal((run_cfg.N, run_cfg.Q))
-    tau_steps = max(0, int(round(run_cfg.tau / run_cfg.dt)))
+
+    baseline = None
+    A_d = np.eye(run_cfg.K) + run_cfg.dt * plant.A
+    Q_d = plant.process_noise_cov * run_cfg.dt
+    Kf = None
+    if run_cfg.use_kalman:
+        Kf = _stationary_kalman_gain(A_d, plant.C, Q_d, plant.measurement_noise_cov)
+        baseline = baselines.DiscreteKalman(
+            A=A_d,
+            C=plant.C,
+            Q=Q_d,
+            R=plant.measurement_noise_cov,
+            x_hat=np.zeros(run_cfg.K),
+            P=np.eye(run_cfg.K),
+        )
+
+    if run_cfg.teacher_forced and Kf is not None:
+        W_y = plant.C @ D
+        G = D.T @ Kf
+
     params = spikeOFC_model.SpikeOFCParams(
         D=D,
         Omega_f=Omega_f,
@@ -43,23 +79,6 @@ def build_components(run_cfg: cfg.RunConfig):
     model = spikeOFC_model.SpikeOFCModel(params)
     state = spikeOFC_model.init_state(run_cfg.N, v_std=run_cfg.init_v_std, rng=rng)
     delay_line = delay.DelayLine(size=run_cfg.N, tau_steps=tau_steps)
-    plant = lti.make_double_integrator(
-        dt=run_cfg.dt,
-        sigma_process=0.05,
-        sigma_measure=0.05,
-    )
-    baseline = None
-    if run_cfg.use_kalman:
-        A_d = np.eye(run_cfg.K) + run_cfg.dt * plant.A
-        Q_d = plant.process_noise_cov * run_cfg.dt
-        baseline = baselines.DiscreteKalman(
-            A=A_d,
-            C=plant.C,
-            Q=Q_d,
-            R=plant.measurement_noise_cov,
-            x_hat=np.zeros(run_cfg.K),
-            P=np.eye(run_cfg.K),
-        )
     return model, state, delay_line, plant, rng, baseline
 
 
