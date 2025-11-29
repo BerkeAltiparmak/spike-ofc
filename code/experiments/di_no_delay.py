@@ -50,6 +50,7 @@ def build_components(run_cfg: cfg.RunConfig):
         D = D * scales[:, None]
     if run_cfg.bounding_box > 0:
         D = D / run_cfg.bounding_box
+    thresholds = 0.5 * np.diag(D.T @ D) * run_cfg.threshold_scale
     Omega_f = scn_core.fast_matrix(D)
     plant = lti.make_double_integrator(
         dt=run_cfg.dt,
@@ -93,6 +94,7 @@ def build_components(run_cfg: cfg.RunConfig):
         lambda_=run_cfg.lambda_decay,
         bias_current=np.full(run_cfg.N, run_cfg.bias_current),
         innovation_gain=run_cfg.innovation_gain,
+        thresholds=thresholds,
     )
     model = spikeOFC_model.SpikeOFCModel(params)
     state = spikeOFC_model.init_state(run_cfg.N, v_std=run_cfg.init_v_std, rng=rng)

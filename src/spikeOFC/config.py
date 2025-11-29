@@ -39,6 +39,7 @@ class RunConfig:
     decoder_scales: Optional[str]
     decoder_basis: str
     bounding_box: float
+    threshold_scale: float
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -82,6 +83,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         type=float,
         default=10.0,
         help="Divide decoder columns by this factor (mirrors SCN bounding box).",
+    )
+    parser.add_argument(
+        "--threshold-scale",
+        type=float,
+        default=1.0,
+        help="Multiplier applied to per-neuron thresholds (base 0.5*diag(DᵀD)).",
     )
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
@@ -132,5 +139,6 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         decoder_scales=args.decoder_scales,
         decoder_basis=args.decoder_basis,
         bounding_box=args.bounding_box,
+        threshold_scale=args.threshold_scale,
     )
 

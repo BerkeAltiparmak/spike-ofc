@@ -13,6 +13,7 @@
     - `state_traces.npz`: arrays `x_hat[t]`, `x_true[t]`.
     - `param_stats.json`: Frobenius norms of `W_y`, `G`, `Ω_s`.
     - Plots (`metrics.png`, `spikes.png`).
+  - Added `code/tools/summarize_runs.py` to aggregate per-run summaries (avg/final MSE, innovation, variance ratios).
 
 - **Teacher-forced (analytic) mode**
   - CLI flag `--teacher-forced` inserts analytic weights (`W_y = C D`, `G = DᵀK_f`) and freezes learning rates.
@@ -33,9 +34,12 @@
   - Scaling row 2 up by 3–4× while shrinking row 1 (`decoder_scale=10`, `decoder_scales=[0.5, 3]`) brought dim2 variance near 1 (`≈1.08`) but blew up dim1 (`≈6.7`), raising RMSE to ~1.7e-2.
   - Larger row scaling (`[1,4]`) drives dim2 to ≈0.95 but dim1 >11, so manual tweaks aren’t stable.
 - Reference code review revealed two critical differences vs. our implementation:
-  - SCN spikes have amplitude `1/dt` and only one neuron fires per dt. We adopted this (see `spike_step`) and changed firing-rate logging accordingly.
-  - The SCN decoder is divided by a `bounding_box_factor` (default 10) to limit discontinuities and set per-neuron thresholds `T = diag(DᵀD)/2`. We added `--bounding-box` (default 10), but thresholds are still global; the next change is to derive thresholds from `D`.
-- After adopting the SCN spike amplitude and a bounding box of 100 (`tf_bbox100_20251129-032837`), variance ratios improved to `[0.76, 0.45]` (closer to unity) without blowing up dim0—confirming we now need finer scaling (per-row and per-neuron thresholds) rather than guessing global gains.
+  - SCN spikes have amplitude `1/dt` and only one neuron fires per dt. We now mirror this in `scn_core.spike_step` and adjusted firing-rate logging.
+  - The SCN decoder is divided by a `bounding_box_factor` and thresholds are per neuron (`T = diag(DᵀD)/2`). CLI now exposes `--bounding-box` and we compute per-neuron thresholds scaled by `--threshold-scale`.
+- Bounding-box experiments:
+  - `tf_bbox_20251129-032815` (bounding box 10) still overshot dim0 variance (~6.7).
+  - Increasing to bounding box 100 (`tf_bbox100_20251129-032837`) yielded `var(x̂)/var(x) ≈ [0.76, 0.45]`, a significant improvement without manual row tweaks.
+  - With per-neuron thresholds active (`tf_thresh_bbox100_20251129-033346`), dim0 lands ~1.0 but dim1 jumps to ~9.0, so we need an automated row-scaling procedure to balance both dims.
 - Conclusion: scaling the decoder helps, but we still need additional gain (likely per-dimension scaling of D or a larger innovation gain) to match the Kalman trajectory before we can trust learning runs.
 
 ## Next steps

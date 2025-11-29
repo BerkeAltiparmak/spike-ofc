@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -36,14 +36,15 @@ def spike_step(
     input_current: Array,
     dt: float,
     lambda_: float,
-    threshold: float = 1.0,
+    threshold: Union[float, Array] = 1.0,
     v_reset: float = 0.0,
 ) -> Tuple[Array, SpikingState]:
     """Single Euler step inspired by SCN dynamics (at most one spike per dt)."""
     dv = (-lambda_ * state.v + input_current) * dt
     v_new = state.v + dv
     spikes = np.zeros_like(state.v)
-    above = np.where(v_new >= threshold)[0]
+    threshold_arr = np.broadcast_to(threshold, state.v.shape)
+    above = np.where(v_new >= threshold_arr)[0]
     if above.size > 0:
         spike_idx = above[np.argmax(v_new[above])]
         spikes[spike_idx] = 1.0 / dt  # Dirac-like pulse

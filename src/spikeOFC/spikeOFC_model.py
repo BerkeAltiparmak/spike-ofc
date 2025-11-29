@@ -26,6 +26,7 @@ class SpikeOFCParams:
     lambda_: float
     bias_current: Array
     innovation_gain: float
+    thresholds: Array
 
 
 @dataclass
@@ -96,7 +97,7 @@ class SpikeOFCModel:
             total_input,
             dt=dt,
             lambda_=self.params.lambda_,
-            threshold=threshold,
+            threshold=self.params.thresholds * threshold if self.params.thresholds is not None else threshold,
             v_reset=v_reset,
         )
         next_state = SpikeOFCState(
