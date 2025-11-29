@@ -41,7 +41,7 @@ Our estimator **factorizes** the SCN Kalman correction:
 **Goal:** Set up package scaffolding and config plumbing.
 - Inputs: `SETUP.md`, `DATA_STRUCTURES.md`.
 - Tasks:
-  - Create `code/spike-ofc/` modules per `DATA_STRUCTURES.md`.
+  - Create `src/` modules per `DATA_STRUCTURES.md`.
   - Add config loader and CLI args (experiment selection, τ, seeds).
   - Logging hooks (wandb or CSV), plots for innovation power, rates.
 

@@ -1,7 +1,7 @@
 # SIMULATION PLAN
 
 ## Phase 0: Skeleton
-- Build `code/spikeOFC/` modules per `DATA_STRUCTURES.md`.
+- Build `src/` modules per `DATA_STRUCTURES.md`.
 - Implement LTI plants (double integrator) and a vanilla continuous-time Kalman for checks.
 
 ## Phase 1: No-delay sanity (τ=0)
