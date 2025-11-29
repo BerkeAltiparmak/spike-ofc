@@ -36,6 +36,8 @@ class RunConfig:
     lambda_decay: float
     omega_scale: float
     decoder_scale: float
+    decoder_scales: Optional[str]
+    decoder_basis: str
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -62,6 +64,18 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--lambda-decay", type=float, default=1.0, help="Membrane leak constant λ.")
     parser.add_argument("--omega-scale", type=float, default=1.0, help="Global multiplier on Ω_s.")
     parser.add_argument("--decoder-scale", type=float, default=1.0, help="Scale applied to decoder D (controls code variance).")
+    parser.add_argument(
+        "--decoder-scales",
+        type=str,
+        default=None,
+        help="Comma-separated per-dimension scales applied row-wise to D (length K).",
+    )
+    parser.add_argument(
+        "--decoder-basis",
+        choices=["random", "identity"],
+        default="random",
+        help="Decoder basis initialization (identity requires N>=K).",
+    )
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
     parser.add_argument("--no-plots", action="store_true", help="Disable matplotlib plots.")
@@ -108,5 +122,7 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         lambda_decay=args.lambda_decay,
         omega_scale=args.omega_scale,
         decoder_scale=args.decoder_scale,
+        decoder_scales=args.decoder_scales,
+        decoder_basis=args.decoder_basis,
     )
 

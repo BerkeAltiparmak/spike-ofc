@@ -29,13 +29,16 @@
   - `decoder_scale=15` overshoots dim0 (variance ratio ≫1) even at modest gains.
   - `decoder_scale=5` keeps variance <0.5 regardless of gain.
 - We are getting closer to the desired variance ratios but still fall short of unity, especially for the second dimension; additional targeted scaling or per-dimension decoder tuning is needed.
+- Row-wise scaling experiments (`tf_row_scale*`):
+  - Scaling row 2 up by 3–4× while shrinking row 1 (`decoder_scale=10`, `decoder_scales=[0.5, 3]`) brought dim2 variance near 1 (`var ratio ≈ 1.08`) but blew up dim1 (`≈6.7`), increasing RMSE to ~0.017.
+  - With larger row scaling (`decoder_scales=[1,4]`) dim2 variance hits ≈0.95 while dim1 skyrockets (>11), confirming we need a more principled way to balance rows rather than manual guessing.
 - Conclusion: scaling the decoder helps, but we still need additional gain (likely per-dimension scaling of D or a larger innovation gain) to match the Kalman trajectory before we can trust learning runs.
 
 ## Next steps
-1. **Keep sweeping excitability parameters (teacher forced)**
-   - Focus on the promising zone (`decoder_scale≈10`, `innovation_gain 40–60`) and experiment with per-dimension scaling of `D` or different Ω_s scalings to lift the second dimension variance without overshooting the first.
-   - Consider replacing `init_decoder` with a more structured basis (scaled identity + noise) to make variance control easier.
-   - Automate the search (Optuna) with objective = `mean_t (‖x̂ - x‖² - ‖x_K - x‖²)` so we can cover the space systematically.
+1. **Automate decoder scaling search (still teacher-forced)**
+   - Implement a small optimizer (grid/Optuna) that adjusts per-row scales based on the measured `var(x̂)/var(x)` (e.g., target ratio 1 by updating row scales multiplicatively).
+   - Keep exploring the `decoder_scale≈10`, `innovation_gain=40–60` regime, but adjust row scalings so both dims land near unity without exploding RMSE.
+   - Consider hybrid decoders (identity basis plus random columns) to control variance better.
 2. **Monitor diagnostics each run**
    - `state_traces.png`, variance ratios, `r_norm`, `Ge_norm`, and firing rates help ensure we’re not saturating or quiescent.
 3. **Once teacher-forced matches Kalman**

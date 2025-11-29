@@ -36,7 +36,18 @@ def _stationary_kalman_gain(
 
 def build_components(run_cfg: cfg.RunConfig):
     rng = _make_rng(run_cfg.seed)
-    D = run_cfg.decoder_scale * scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
+    if run_cfg.decoder_basis == "identity":
+        if run_cfg.N < run_cfg.K:
+            raise ValueError("identity decoder basis requires N >= K")
+        D = np.zeros((run_cfg.K, run_cfg.N))
+        np.fill_diagonal(D[:, : run_cfg.K], run_cfg.decoder_scale)
+    else:
+        D = run_cfg.decoder_scale * scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
+    if run_cfg.decoder_scales:
+        scales = np.fromstring(run_cfg.decoder_scales, sep=",")
+        if scales.size != run_cfg.K:
+            raise ValueError(f"Expected {run_cfg.K} decoder scales, got {scales.size}")
+        D = D * scales[:, None]
     Omega_f = scn_core.fast_matrix(D)
     plant = lti.make_double_integrator(
         dt=run_cfg.dt,
