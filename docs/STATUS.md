@@ -40,6 +40,7 @@
   - `tf_bbox_20251129-032815` (bounding box 10) still overshot dim0 variance (~6.7).
   - Increasing to bounding box 100 (`tf_bbox100_20251129-032837`) yielded `var(x̂)/var(x) ≈ [0.76, 0.45]`, a significant improvement without manual row tweaks.
   - With per-neuron thresholds active (`tf_thresh_bbox100_20251129-033346`), dim0 lands ~1.0 but dim1 jumps to ~9.0, so we need an automated row-scaling procedure to balance both dims.
+- Optuna decoder-scale search (`code/tools/optuna_decoder_tune.py`, 9 trials) suggested `decoder_scales ≈ [1.99, 0.95]` but the resulting run (`tf_optuna_best_20251129-035231`) still overshot both dims (`var ratios ≈ [19.2, 1.82]`). Conclusion: objective needs additional constraints (e.g., regularize high firing rates) and/or the search space must include bounding box + gains jointly.
 - Conclusion: scaling the decoder helps, but we still need additional gain (likely per-dimension scaling of D or a larger innovation gain) to match the Kalman trajectory before we can trust learning runs.
 
 ## Next steps
