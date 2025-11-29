@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 
 import numpy as np
 
-from . import delay, learning, logging as log_utils, lti, spikeOFC_model
+from . import baselines, delay, learning, logging as log_utils, lti, spikeOFC_model
 
 
 @dataclass
@@ -39,7 +39,8 @@ def simulate(
     x0: np.ndarray,
     rng: np.random.Generator,
     config: SimulationConfig,
-    ) -> SimulationOutputs:
+    baseline: Optional[baselines.DiscreteKalman] = None,
+) -> SimulationOutputs:
     """Run the predict → compare → correct loop."""
     steps = int(config.T / config.dt)
     x = x0.copy()
@@ -48,6 +49,9 @@ def simulate(
         "mse": [],
         "firing_rate": [],
     }
+    if baseline is not None:
+        logs["kalman_mse"] = []
+        logs["kalman_innovation"] = []
     spike_buffer: List[np.ndarray] | None = [] if config.record_spikes else None
     delay_line.reset()
     delay_line.push(estimator_state.r)
@@ -84,6 +88,10 @@ def simulate(
         logs["firing_rate"].append(log_utils.firing_rate(estimator_state.s, config.dt))
         if spike_buffer is not None:
             spike_buffer.append(estimator_state.s.copy())
+        if baseline is not None:
+            x_kalman, innovation_kalman = baseline.step(y)
+            logs["kalman_mse"].append(log_utils.state_mse(x_kalman, x))
+            logs["kalman_innovation"].append(log_utils.innovation_power(innovation_kalman))
 
     spike_history = None
     if spike_buffer is not None and len(spike_buffer) > 0:

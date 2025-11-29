@@ -7,12 +7,12 @@ import json
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 import numpy as np
 
 from src.spikeOFC import config as cfg
-from src.spikeOFC import delay, lti, loop, scn_core, spikeOFC_model
+from src.spikeOFC import baselines, delay, lti, loop, scn_core, spikeOFC_model
 
 
 def _make_rng(seed: int):
@@ -47,7 +47,19 @@ def build_components(run_cfg: cfg.RunConfig):
         sigma_process=0.05,
         sigma_measure=0.05,
     )
-    return model, state, delay_line, plant, rng
+    baseline = None
+    if run_cfg.use_kalman:
+        A_d = np.eye(run_cfg.K) + run_cfg.dt * plant.A
+        Q_d = plant.process_noise_cov * run_cfg.dt
+        baseline = baselines.DiscreteKalman(
+            A=A_d,
+            C=plant.C,
+            Q=Q_d,
+            R=plant.measurement_noise_cov,
+            x_hat=np.zeros(run_cfg.K),
+            P=np.eye(run_cfg.K),
+        )
+    return model, state, delay_line, plant, rng, baseline
 
 
 def _prepare_run_dir(run_cfg: cfg.RunConfig) -> Path:
@@ -65,20 +77,27 @@ def _write_config(run_cfg: cfg.RunConfig, out_dir: Path) -> None:
         json.dump(asdict(run_cfg), f, indent=2)
 
 
+def _ordered_metrics(logs: dict[str, list[float]]) -> List[str]:
+    base = ["innovation", "mse", "firing_rate"]
+    extras = []
+    if "kalman_innovation" in logs:
+        extras.append("kalman_innovation")
+    if "kalman_mse" in logs:
+        extras.append("kalman_mse")
+    return base + extras
+
+
 def _write_logs(logs: dict[str, list[float]], dt: float, out_dir: Path) -> None:
+    metric_keys = _ordered_metrics(logs)
     times = np.arange(len(logs["innovation"])) * dt
     with (out_dir / "metrics.csv").open("w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["t", "innovation", "mse", "firing_rate"])
+        writer.writerow(["t"] + metric_keys)
         for idx, t in enumerate(times):
-            writer.writerow(
-                [
-                    f"{t:.6f}",
-                    f"{logs['innovation'][idx]:.6e}",
-                    f"{logs['mse'][idx]:.6e}",
-                    f"{logs['firing_rate'][idx]:.6e}",
-                ]
-            )
+            row = [f"{t:.6f}"]
+            for key in metric_keys:
+                row.append(f"{logs[key][idx]:.6e}")
+            writer.writerow(row)
 
 
 def _plot_metrics(
@@ -94,10 +113,14 @@ def _plot_metrics(
 
     times = np.arange(len(logs["innovation"])) * dt
     fig, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
-    axes[0].plot(times, logs["innovation"], label="||e||^2")
+    axes[0].plot(times, logs["innovation"], label="Spike-OFC ||e||^2")
+    if "kalman_innovation" in logs:
+        axes[0].plot(times, logs["kalman_innovation"], label="Kalman ||e||^2", linestyle="--")
     axes[0].set_ylabel("Innovation energy")
     axes[0].legend()
-    axes[1].plot(times, logs["mse"], color="tab:orange", label="||x̂ - x||^2")
+    axes[1].plot(times, logs["mse"], color="tab:orange", label="Spike-OFC ||x̂ - x||^2")
+    if "kalman_mse" in logs:
+        axes[1].plot(times, logs["kalman_mse"], color="tab:green", linestyle="--", label="Kalman ||x̂ - x||^2")
     axes[1].set_ylabel("State MSE")
     axes[1].set_xlabel("Time (s)")
     axes[1].legend()
@@ -125,7 +148,7 @@ def _plot_metrics(
 
 def main():
     run_cfg = cfg.parse_args()
-    model, state, delay_line, plant, rng = build_components(run_cfg)
+    model, state, delay_line, plant, rng, baseline = build_components(run_cfg)
     out_dir = _prepare_run_dir(run_cfg)
     _write_config(run_cfg, out_dir)
     sim_cfg = loop.SimulationConfig(
@@ -144,15 +167,20 @@ def main():
         x0=np.zeros(run_cfg.K),
         rng=rng,
         config=sim_cfg,
+        baseline=baseline,
     )
     logs = outputs.logs
     _write_logs(logs, run_cfg.dt, out_dir)
     if run_cfg.make_plots:
         _plot_metrics(logs, run_cfg.dt, outputs.spike_history, out_dir)
     print("Simulation completed.")
-    print(f"Innovation power (final): {logs['innovation'][-1]:.4e}")
-    print(f"State MSE (final): {logs['mse'][-1]:.4e}")
-    print(f"Average firing rate: {np.mean(logs['firing_rate']):.4e} Hz")
+    print(f"{'Spike-OFC innovation (final):':35s} {logs['innovation'][-1]:.4e}")
+    print(f"{'Spike-OFC MSE (final):':35s} {logs['mse'][-1]:.4e}")
+    if "kalman_innovation" in logs:
+        print(f"{'Kalman innovation (final):':35s} {logs['kalman_innovation'][-1]:.4e}")
+    if "kalman_mse" in logs:
+        print(f"{'Kalman MSE (final):':35s} {logs['kalman_mse'][-1]:.4e}")
+    print(f"{'Average firing rate:':35s} {np.mean(logs['firing_rate']):.4e} Hz")
     print(f"Artifacts written to: {out_dir}")
 
 

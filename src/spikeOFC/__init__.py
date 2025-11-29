@@ -15,6 +15,7 @@ from . import (
     loop,
     logging as logging_utils,
     config,
+    baselines,
 )
 
 __all__ = [
@@ -26,5 +27,6 @@ __all__ = [
     "loop",
     "logging_utils",
     "config",
+    "baselines",
 ]
 

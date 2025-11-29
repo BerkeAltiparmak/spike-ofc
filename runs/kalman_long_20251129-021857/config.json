@@ -1,0 +1,18 @@
+{
+  "experiment": "di_no_delay",
+  "K": 2,
+  "Q": 1,
+  "N": 64,
+  "dt": 0.001,
+  "T": 2.0,
+  "tau": 0.0,
+  "seed": 0,
+  "eta_wy": 0.001,
+  "eta_g": 0.001,
+  "eta_omega_s": 0.0001,
+  "run_dir": "runs",
+  "tag": "kalman_long",
+  "make_plots": true,
+  "record_spikes": true,
+  "use_kalman": true
+}

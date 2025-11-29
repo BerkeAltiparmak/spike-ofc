@@ -24,6 +24,7 @@ class RunConfig:
     tag: Optional[str]
     make_plots: bool
     record_spikes: bool
+    use_kalman: bool
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -47,6 +48,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Store spike rasters even if plots are disabled.",
     )
+    parser.add_argument(
+        "--no-kalman",
+        action="store_true",
+        help="Disable the analytic Kalman baseline comparison.",
+    )
     return parser
 
 
@@ -68,5 +74,6 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         tag=args.tag,
         make_plots=not args.no_plots,
         record_spikes=args.record_spikes,
+        use_kalman=not args.no_kalman,
     )
 

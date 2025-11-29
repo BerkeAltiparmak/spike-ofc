@@ -6,6 +6,6 @@
 - [ ] Implement learning rules; add Oja/decay options *(rules coded in `src/spikeOFC/learning.py`; stability work TBD)*
 - [ ] Double integrator experiment (τ=0) + plots *(run harness in `code/experiments/di_no_delay.py`; CSV + PNG emitted, need Kalman baseline + longer runs)*
 - [ ] Add τ>0 and verify alignment
-- [ ] Compare to analytic Kalman (no learning) baseline
+- [ ] Compare to analytic Kalman (no learning) baseline *(baseline filter wired into `code/experiments/di_no_delay.py`; need cross-check plots + validation)*
 - [ ] Neuron dropout study
 - [ ] Unit tests: shapes, invariants, innovation decreases
