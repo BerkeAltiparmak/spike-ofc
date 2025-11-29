@@ -32,6 +32,7 @@ class RunConfig:
     init_v_std: float
     init_wy_scale: float
     init_g_scale: float
+    teacher_forced: bool
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -54,6 +55,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-v-std", type=float, default=0.05, help="Stddev for initial voltages to break symmetry.")
     parser.add_argument("--init-wy-scale", type=float, default=0.1, help="Stddev multiplier for Wy init.")
     parser.add_argument("--init-g-scale", type=float, default=0.1, help="Stddev multiplier for G init.")
+    parser.add_argument("--teacher-forced", action="store_true", help="Use analytic Wy/G (no learning) to check the SCN substrate.")
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
     parser.add_argument("--no-plots", action="store_true", help="Disable matplotlib plots.")
@@ -96,5 +98,6 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         init_v_std=args.init_v_std,
         init_wy_scale=args.init_wy_scale,
         init_g_scale=args.init_g_scale,
+        teacher_forced=args.teacher_forced,
     )
 

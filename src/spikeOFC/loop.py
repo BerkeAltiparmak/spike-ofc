@@ -29,6 +29,7 @@ class SimulationOutputs:
     logs: Dict[str, List[float]]
     state: spikeOFC_model.SpikeOFCState
     spike_history: Optional[np.ndarray] = None
+    decoded_history: Optional[np.ndarray] = None
 
 
 def simulate(
@@ -53,6 +54,7 @@ def simulate(
         logs["kalman_mse"] = []
         logs["kalman_innovation"] = []
     spike_buffer: List[np.ndarray] | None = [] if config.record_spikes else None
+    decode_buffer: List[np.ndarray] = []
     delay_line.reset()
     delay_line.push(estimator_state.r)
 
@@ -85,6 +87,7 @@ def simulate(
         x_hat = model.params.D @ estimator_state.r
         logs["innovation"].append(log_utils.innovation_power(e))
         logs["mse"].append(log_utils.state_mse(x_hat, x))
+        decode_buffer.append(x_hat.copy())
         logs["firing_rate"].append(log_utils.firing_rate(estimator_state.s, config.dt))
         if spike_buffer is not None:
             spike_buffer.append(estimator_state.s.copy())
@@ -96,6 +99,12 @@ def simulate(
     spike_history = None
     if spike_buffer is not None and len(spike_buffer) > 0:
         spike_history = np.stack(spike_buffer, axis=0)
+    decoded_history = np.stack(decode_buffer, axis=0) if decode_buffer else None
 
-    return SimulationOutputs(logs=logs, state=estimator_state, spike_history=spike_history)
+    return SimulationOutputs(
+        logs=logs,
+        state=estimator_state,
+        spike_history=spike_history,
+        decoded_history=decoded_history,
+    )
 
