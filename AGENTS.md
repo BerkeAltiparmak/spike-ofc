@@ -20,9 +20,9 @@ Our estimator **factorizes** the SCN Kalman correction:
 - `DATA_STRUCTURES.md` (APIs and tensor shapes)
 
 **Assets available:**
-- Papers (PDF): `papers/Closed-form control with spike coding networks.pdf`, `papers/Neural optimal feedback control with local learning rules.pdf`
+- Papers (PDF): `references/SCN/Closed-form control with spike coding networks.pdf`, `references/Bio-OFC/Neural optimal feedback control with local learning rules.pdf`
+- Corresponding codes used in the papers, retrieved from the repositories of the authors: `references/SCN/` and `references/Bio-OFC/`.
 - Idea proposal draft: `ideas/paper.tex` (architecture narrative)
-- Repos links: `REPOS.md` (SCN/Bio-OFC author code, if available)
 
 ---
 
