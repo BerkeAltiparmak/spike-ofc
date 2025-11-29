@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import matplotlib
+
+matplotlib.use("Agg", force=True)
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -103,13 +106,13 @@ def _plot_metrics(
 
     if spike_history is not None:
         fig, ax = plt.subplots(figsize=(9, 4))
-        extent = [times[0], times[-1] if len(times) else 0, 0, spike_history.shape[1]]
+        extent = [0, times[-1] if len(times) else 0, 0, spike_history.shape[1]]
         ax.imshow(
             spike_history.T,
             aspect="auto",
             origin="lower",
             interpolation="nearest",
-            extent=[0, times[-1] if len(times) else 0, 0, spike_history.shape[1]],
+            extent=extent,
         )
         ax.set_ylabel("Neuron index")
         ax.set_xlabel("Time (s)")
