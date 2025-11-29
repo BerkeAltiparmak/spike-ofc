@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Any, Dict
 
 import numpy as np
 
@@ -33,6 +33,11 @@ class SpikeOFCState:
     v: Array
     r: Array
     s: Array
+
+
+def init_state(N: int) -> SpikeOFCState:
+    zeros = np.zeros(N)
+    return SpikeOFCState(v=zeros.copy(), r=zeros.copy(), s=zeros.copy())
 
 
 class SpikeOFCModel:
@@ -67,7 +72,7 @@ class SpikeOFCModel:
         dt: float,
         threshold: float = 1.0,
         v_reset: float = 0.0,
-    ) -> Dict[str, Array]:
+    ) -> Dict[str, Any]:
         r_delay = delay_line.read()
         y_hat = self.predict_sensors(r_delay)
         e = self.innovation(y, y_hat)

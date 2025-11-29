@@ -23,6 +23,12 @@ class SimulationConfig:
     v_reset: float = 0.0
 
 
+@dataclass
+class SimulationOutputs:
+    logs: Dict[str, List[float]]
+    state: spikeOFC_model.SpikeOFCState
+
+
 def simulate(
     model: spikeOFC_model.SpikeOFCModel,
     plant: lti.LTISystem,
@@ -31,7 +37,7 @@ def simulate(
     x0: np.ndarray,
     rng: np.random.Generator,
     config: SimulationConfig,
-) -> Dict[str, List[float]]:
+    ) -> SimulationOutputs:
     """Run the predict → compare → correct loop."""
     steps = int(config.T / config.dt)
     x = x0.copy()
@@ -74,5 +80,5 @@ def simulate(
         logs["mse"].append(log_utils.state_mse(x_hat, x))
         logs["firing_rate"].append(log_utils.firing_rate(estimator_state.s, config.dt))
 
-    return logs
+    return SimulationOutputs(logs=logs, state=estimator_state)
 
