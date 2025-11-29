@@ -13,7 +13,7 @@
     - `state_traces.npz`: arrays `x_hat[t]`, `x_true[t]`.
     - `param_stats.json`: Frobenius norms of `W_y`, `G`, `Ω_s`.
     - Plots (`metrics.png`, `spikes.png`).
-  - Added `code/tools/summarize_runs.py` to aggregate per-run summaries (avg/final MSE, innovation, variance ratios).
+  - Added `code/tools/summarize_runs.py` (per-run summaries) and `code/tools/tune_decoder_scales.py` (suggest per-row decoder scales using `state_traces.npz`).
 
 - **Teacher-forced (analytic) mode**
   - CLI flag `--teacher-forced` inserts analytic weights (`W_y = C D`, `G = DᵀK_f`) and freezes learning rates.
@@ -47,7 +47,7 @@
    - Derive thresholds from `T = diag(DᵀD)/2` instead of a global constant so spike resets match the reference implementation.
    - Keep the bounding-box parameter (100 worked best so far) and expose it via the CLI for sweeps.
 2. **Automate decoder scaling search (still teacher-forced)**
-   - Implement a small optimizer (grid/Optuna) that adjusts per-row scales to drive `var(x̂)/var(x)` toward 1 (e.g., multiplicative updates using the measured ratios).
+   - Use `code/tools/tune_decoder_scales.py` for iterative updates or `code/tools/optuna_decoder_tune.py` (Optuna loop) to drive `var(x̂)/var(x)` toward 1 without manual guessing.
    - Work around the promising configuration (`decoder_scale=10`, `bounding_box≈100`, `innovation_gain≈40`) and refine per-row scalings to balance both dimensions.
 2. **Monitor diagnostics each run**
    - `state_traces.png`, variance ratios, `r_norm`, `Ge_norm`, and firing rates help ensure we’re not saturating or quiescent.
