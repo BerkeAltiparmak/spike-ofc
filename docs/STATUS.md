@@ -20,23 +20,19 @@
   - Provides a ground-truth check for the SCN substrate before enabling learning.
 
 ## Current situation / observed issue
-- Even in teacher-forced mode, the decoded state `x̂ = D r` stays nearly zero:
-  - Variance ratio `var(x̂)/var(x) ≈ 10⁻³` in `runs/tf_check2_20251129-030435`.
-  - RMSE per dimension `[1.7e-2, 6.4e-2]`, far above the analytic Kalman output.
-  - Average `‖r‖₂ ≈ 5e-3` and `‖Ge‖₂ ≈ 1e-2`, so the estimator population receives almost no current.
-- Because the substrate is under-excited, innovation/MSE curves only “look good” when the latent state has tiny variance; the network fails to track real plant dynamics regardless of learning.
-- Root cause: excitability settings (`threshold`, `bias_current`, `innovation_gain`, `Ω_s` scaling, leak λ) are too low, so spikes rarely fire and the state code never leaves the origin. Learning cannot fix this until the substrate reproduces the Kalman behaviour with analytic weights.
+- Even in teacher-forced mode, the decoded state `x̂ = D r` carries much less variance than the true state:
+  - Baseline run `tf_check2_20251129-030435`: `var(x̂)/var(x) ≈ [3e-3, 2e-3]`, RMSE `[1.7e-2, 6.4e-2]`, average `‖r‖₂ ≈ 5e-3`.
+  - Aggressive gain run `tf_gain_sweep_20251129-031156` (`threshold 0.02`, `bias_current 0.5`, `innovation_gain 25`, `lambda_decay 0.3`, `omega_scale 2`): firing rate ≈21 Hz, `var(x̂)/var(x)` improves to `[1.3e-2, 5.3e-2]`, but still <0.1 so the decoded trajectory remains underscaled.
+- Diagnostics show innovation power still > Kalman and decoded states lag in amplitude. The SCN substrate needs further rescaling (decoder magnitude, Ω_s gain, leak) before learning can be evaluated.
 
 ## Next steps
-1. **Tune substrate gains in teacher-forced mode**
-   - Sweep `{threshold, bias_current, innovation_gain}` (Optuna/grid) to maximize decoded-vs-true variance overlap or minimize teacher-forced RMSE.
-   - Adjust `Ω_s` scaling and/or leak λ (`lambda_` parameter in `SpikeOFCParams`) to ensure `r` has comparable variance to the true state.
-2. **Re-run diagnostics after each sweep**
-   - Use `state_traces.png`, variance ratios, and `metrics.csv` to confirm that `x̂(t)` overlays the Kalman trajectory.
-3. **Re-enable learning once the substrate matches the analytic baseline**
-   - Gradually turn on `η_wy`, `η_g`, `η_Ωs` and check whether innovation/MSE curves converge toward the teacher-forced reference.
-4. **Future tasks (after stability)**
-   - Introduce measurement delay (τ>0) via `DelayLine`, compare against Kalman with delay.
-   - Add Optuna sweeps for learning-rate/bias tuning.
-   - Automate plotting of decoded trajectories inside the main experiment to simplify CI checks.
+1. **Continue substrate gain/scale sweeps in teacher-forced mode**
+   - Now that `--lambda-decay` and `--omega-scale` exist, experiment with decoder scaling (e.g., multiply `D` by a configurable factor) and innovation gain to push `var(x̂)/var(x)` toward 1.
+   - Automate sweeps (Optuna/grid) with objective = teacher-forced RMSE minus Kalman RMSE.
+2. **Inspect diagnostics after each sweep**
+   - Use `state_traces.png`, variance ratios, `r_norm`, and `Ge_norm` to ensure we neither starve nor saturate the code.
+3. **Only after the substrate matches analytic Kalman**
+   - Re-enable learning rates and check that innovation/MSE converge toward the reference curves.
+4. **Future tasks (once stable)**
+   - Introduce τ>0 delay tests, dropout/noise ablations, and automated hyperparameter tuning for the learning rules.
 

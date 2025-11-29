@@ -33,6 +33,9 @@ class RunConfig:
     init_wy_scale: float
     init_g_scale: float
     teacher_forced: bool
+    lambda_decay: float
+    omega_scale: float
+    decoder_scale: float
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -56,6 +59,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--init-wy-scale", type=float, default=0.1, help="Stddev multiplier for Wy init.")
     parser.add_argument("--init-g-scale", type=float, default=0.1, help="Stddev multiplier for G init.")
     parser.add_argument("--teacher-forced", action="store_true", help="Use analytic Wy/G (no learning) to check the SCN substrate.")
+    parser.add_argument("--lambda-decay", type=float, default=1.0, help="Membrane leak constant λ.")
+    parser.add_argument("--omega-scale", type=float, default=1.0, help="Global multiplier on Ω_s.")
+    parser.add_argument("--decoder-scale", type=float, default=1.0, help="Scale applied to decoder D (controls code variance).")
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
     parser.add_argument("--no-plots", action="store_true", help="Disable matplotlib plots.")
@@ -99,5 +105,8 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         init_wy_scale=args.init_wy_scale,
         init_g_scale=args.init_g_scale,
         teacher_forced=args.teacher_forced,
+        lambda_decay=args.lambda_decay,
+        omega_scale=args.omega_scale,
+        decoder_scale=args.decoder_scale,
     )
 

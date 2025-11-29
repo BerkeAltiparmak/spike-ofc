@@ -36,7 +36,7 @@ def _stationary_kalman_gain(
 
 def build_components(run_cfg: cfg.RunConfig):
     rng = _make_rng(run_cfg.seed)
-    D = scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
+    D = run_cfg.decoder_scale * scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
     Omega_f = scn_core.fast_matrix(D)
     plant = lti.make_double_integrator(
         dt=run_cfg.dt,
@@ -45,8 +45,8 @@ def build_components(run_cfg: cfg.RunConfig):
     )
     tau_steps = max(0, int(round(run_cfg.tau / run_cfg.dt)))
 
-    predictor_matrix = plant.A + np.eye(run_cfg.K)
-    Omega_s = D.T @ predictor_matrix @ D
+    predictor_matrix = plant.A + run_cfg.lambda_decay * np.eye(run_cfg.K)
+    Omega_s = run_cfg.omega_scale * (D.T @ predictor_matrix @ D)
 
     W_y = run_cfg.init_wy_scale * rng.standard_normal((run_cfg.Q, run_cfg.N))
     G = run_cfg.init_g_scale * rng.standard_normal((run_cfg.N, run_cfg.Q))
@@ -77,7 +77,7 @@ def build_components(run_cfg: cfg.RunConfig):
         W_y=W_y,
         G=G,
         tau_steps=tau_steps,
-        lambda_=1.0,
+        lambda_=run_cfg.lambda_decay,
         bias_current=np.full(run_cfg.N, run_cfg.bias_current),
         innovation_gain=run_cfg.innovation_gain,
     )
