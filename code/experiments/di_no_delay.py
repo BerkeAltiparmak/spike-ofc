@@ -104,6 +104,10 @@ def _write_config(run_cfg: cfg.RunConfig, out_dir: Path) -> None:
 
 def _ordered_metrics(logs: dict[str, list[float]]) -> List[str]:
     base = ["innovation", "mse", "firing_rate"]
+    if "r_norm" in logs:
+        base.append("r_norm")
+    if "Ge_norm" in logs:
+        base.append("Ge_norm")
     extras = []
     if "kalman_innovation" in logs:
         extras.append("kalman_innovation")

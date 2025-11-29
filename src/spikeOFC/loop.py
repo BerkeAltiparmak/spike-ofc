@@ -50,6 +50,8 @@ def simulate(
         "innovation": [],
         "mse": [],
         "firing_rate": [],
+        "r_norm": [],
+        "Ge_norm": [],
     }
     if baseline is not None:
         logs["kalman_mse"] = []
@@ -91,6 +93,8 @@ def simulate(
         logs["innovation"].append(log_utils.innovation_power(e))
         logs["mse"].append(log_utils.state_mse(x_hat, x))
         decode_buffer.append(x_hat.copy())
+        logs["r_norm"].append(float(np.linalg.norm(estimator_state.r)))
+        logs["Ge_norm"].append(float(np.linalg.norm(Ge)))
         logs["firing_rate"].append(log_utils.firing_rate(estimator_state.s, config.dt))
         if spike_buffer is not None:
             spike_buffer.append(estimator_state.s.copy())
