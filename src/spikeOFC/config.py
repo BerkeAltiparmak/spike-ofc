@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -19,6 +20,10 @@ class RunConfig:
     eta_wy: float
     eta_g: float
     eta_omega_s: float
+    run_dir: str
+    tag: Optional[str]
+    make_plots: bool
+    record_spikes: bool
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -34,6 +39,14 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--eta_wy", type=float, default=1e-3)
     parser.add_argument("--eta_g", type=float, default=1e-3)
     parser.add_argument("--eta_omega_s", type=float, default=1e-4)
+    parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
+    parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
+    parser.add_argument("--no-plots", action="store_true", help="Disable matplotlib plots.")
+    parser.add_argument(
+        "--record-spikes",
+        action="store_true",
+        help="Store spike rasters even if plots are disabled.",
+    )
     return parser
 
 
@@ -51,5 +64,9 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         eta_wy=args.eta_wy,
         eta_g=args.eta_g,
         eta_omega_s=args.eta_omega_s,
+        run_dir=args.run_dir,
+        tag=args.tag,
+        make_plots=not args.no_plots,
+        record_spikes=args.record_spikes,
     )
 

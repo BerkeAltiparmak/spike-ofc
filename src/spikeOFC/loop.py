@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -21,12 +21,14 @@ class SimulationConfig:
     omega_symmetrize: bool = True
     threshold: float = 1.0
     v_reset: float = 0.0
+    record_spikes: bool = False
 
 
 @dataclass
 class SimulationOutputs:
     logs: Dict[str, List[float]]
     state: spikeOFC_model.SpikeOFCState
+    spike_history: Optional[np.ndarray] = None
 
 
 def simulate(
@@ -46,6 +48,7 @@ def simulate(
         "mse": [],
         "firing_rate": [],
     }
+    spike_buffer: List[np.ndarray] | None = [] if config.record_spikes else None
     delay_line.reset()
     delay_line.push(estimator_state.r)
 
@@ -79,6 +82,12 @@ def simulate(
         logs["innovation"].append(log_utils.innovation_power(e))
         logs["mse"].append(log_utils.state_mse(x_hat, x))
         logs["firing_rate"].append(log_utils.firing_rate(estimator_state.s, config.dt))
+        if spike_buffer is not None:
+            spike_buffer.append(estimator_state.s.copy())
 
-    return SimulationOutputs(logs=logs, state=estimator_state)
+    spike_history = None
+    if spike_buffer is not None and len(spike_buffer) > 0:
+        spike_history = np.stack(spike_buffer, axis=0)
+
+    return SimulationOutputs(logs=logs, state=estimator_state, spike_history=spike_history)
 
