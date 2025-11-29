@@ -40,7 +40,6 @@ class SpikeOFCModel:
 
     def __init__(self, params: SpikeOFCParams):
         self.params = params
-        self.delay_line = delay.DelayLine(size=params.r.size if hasattr(params, "r") else params.D.shape[1], tau_steps=params.tau_steps)  # type: ignore
 
     def predict_sensors(self, r_delay: Array) -> Array:
         return self.params.W_y @ r_delay
@@ -56,6 +55,9 @@ class SpikeOFCModel:
         prediction_drive = self.params.Omega_s @ state.r
         fast_drive = self.params.Omega_f @ state.s
         return prediction_drive + fast_drive + innovation_drive
+
+    def decode(self, state: SpikeOFCState) -> Array:
+        return self.params.D @ state.r
 
     def step(
         self,
@@ -90,5 +92,6 @@ class SpikeOFCModel:
             "y_hat": y_hat,
             "e": e,
             "Ge": Ge,
+            "r_delay": r_delay,
         }
 

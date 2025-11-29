@@ -14,6 +14,7 @@ from . import (
     delay,
     loop,
     logging as logging_utils,
+    config,
 )
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     "delay",
     "loop",
     "logging_utils",
+    "config",
 ]
 
