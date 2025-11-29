@@ -24,6 +24,8 @@ class SpikeOFCParams:
     G: Array
     tau_steps: int
     lambda_: float
+    bias_current: Array
+    innovation_gain: float
 
 
 @dataclass
@@ -35,9 +37,15 @@ class SpikeOFCState:
     s: Array
 
 
-def init_state(N: int) -> SpikeOFCState:
-    zeros = np.zeros(N)
-    return SpikeOFCState(v=zeros.copy(), r=zeros.copy(), s=zeros.copy())
+def init_state(N: int, v_std: float = 0.0, rng: np.random.Generator | None = None) -> SpikeOFCState:
+    if v_std > 0.0:
+        rng = rng or np.random.default_rng()
+        v0 = rng.normal(scale=v_std, size=N)
+    else:
+        v0 = np.zeros(N)
+    r0 = np.zeros(N)
+    s0 = np.zeros(N)
+    return SpikeOFCState(v=v0, r=r0, s=s0)
 
 
 class SpikeOFCModel:
@@ -59,7 +67,12 @@ class SpikeOFCModel:
     def voltage_rhs(self, state: SpikeOFCState, innovation_drive: Array) -> Array:
         prediction_drive = self.params.Omega_s @ state.r
         fast_drive = self.params.Omega_f @ state.s
-        return prediction_drive + fast_drive + innovation_drive
+        return (
+            prediction_drive
+            + fast_drive
+            + self.params.innovation_gain * innovation_drive
+            + self.params.bias_current
+        )
 
     def decode(self, state: SpikeOFCState) -> Array:
         return self.params.D @ state.r

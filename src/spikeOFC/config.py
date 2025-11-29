@@ -25,6 +25,13 @@ class RunConfig:
     make_plots: bool
     record_spikes: bool
     use_kalman: bool
+    threshold: float
+    v_reset: float
+    bias_current: float
+    innovation_gain: float
+    init_v_std: float
+    init_wy_scale: float
+    init_g_scale: float
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -40,6 +47,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--eta_wy", type=float, default=1e-3)
     parser.add_argument("--eta_g", type=float, default=1e-3)
     parser.add_argument("--eta_omega_s", type=float, default=1e-4)
+    parser.add_argument("--threshold", type=float, default=0.05, help="Spiking threshold.")
+    parser.add_argument("--v_reset", type=float, default=0.0, help="Voltage reset value after spikes.")
+    parser.add_argument("--bias-current", type=float, default=0.2, help="Constant bias injected into estimator dendrites.")
+    parser.add_argument("--innovation-gain", type=float, default=10.0, help="Gain applied to innovation current Ge.")
+    parser.add_argument("--init-v-std", type=float, default=0.05, help="Stddev for initial voltages to break symmetry.")
+    parser.add_argument("--init-wy-scale", type=float, default=0.1, help="Stddev multiplier for Wy init.")
+    parser.add_argument("--init-g-scale", type=float, default=0.1, help="Stddev multiplier for G init.")
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
     parser.add_argument("--no-plots", action="store_true", help="Disable matplotlib plots.")
@@ -75,5 +89,12 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         make_plots=not args.no_plots,
         record_spikes=args.record_spikes,
         use_kalman=not args.no_kalman,
+        threshold=args.threshold,
+        v_reset=args.v_reset,
+        bias_current=args.bias_current,
+        innovation_gain=args.innovation_gain,
+        init_v_std=args.init_v_std,
+        init_wy_scale=args.init_wy_scale,
+        init_g_scale=args.init_g_scale,
     )
 

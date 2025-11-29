@@ -11,8 +11,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from src.spikeOFC import config as cfg
-from src.spikeOFC import baselines, delay, lti, loop, scn_core, spikeOFC_model
+from src.spikeOFC import baselines, config as cfg, delay, lti, loop, scn_core, spikeOFC_model
 
 
 def _make_rng(seed: int):
@@ -27,8 +26,8 @@ def build_components(run_cfg: cfg.RunConfig):
     D = scn_core.init_decoder(run_cfg.K, run_cfg.N, rng)
     Omega_f = scn_core.fast_matrix(D)
     Omega_s = np.zeros((run_cfg.N, run_cfg.N))
-    W_y = 0.01 * rng.standard_normal((run_cfg.Q, run_cfg.N))
-    G = 0.01 * rng.standard_normal((run_cfg.N, run_cfg.Q))
+    W_y = run_cfg.init_wy_scale * rng.standard_normal((run_cfg.Q, run_cfg.N))
+    G = run_cfg.init_g_scale * rng.standard_normal((run_cfg.N, run_cfg.Q))
     tau_steps = max(0, int(round(run_cfg.tau / run_cfg.dt)))
     params = spikeOFC_model.SpikeOFCParams(
         D=D,
@@ -38,9 +37,11 @@ def build_components(run_cfg: cfg.RunConfig):
         G=G,
         tau_steps=tau_steps,
         lambda_=1.0,
+        bias_current=np.full(run_cfg.N, run_cfg.bias_current),
+        innovation_gain=run_cfg.innovation_gain,
     )
     model = spikeOFC_model.SpikeOFCModel(params)
-    state = spikeOFC_model.init_state(run_cfg.N)
+    state = spikeOFC_model.init_state(run_cfg.N, v_std=run_cfg.init_v_std, rng=rng)
     delay_line = delay.DelayLine(size=run_cfg.N, tau_steps=tau_steps)
     plant = lti.make_double_integrator(
         dt=run_cfg.dt,
@@ -158,6 +159,8 @@ def main():
         eta_g=run_cfg.eta_g,
         eta_omega_s=run_cfg.eta_omega_s,
         record_spikes=run_cfg.record_spikes or run_cfg.make_plots,
+        threshold=run_cfg.threshold,
+        v_reset=run_cfg.v_reset,
     )
     outputs = loop.simulate(
         model=model,
