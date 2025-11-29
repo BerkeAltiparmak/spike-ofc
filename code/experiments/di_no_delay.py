@@ -9,10 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-import matplotlib
-
-matplotlib.use("Agg", force=True)
-import matplotlib.pyplot as plt
 import numpy as np
 
 from src.spikeOFC import config as cfg
@@ -91,6 +87,11 @@ def _plot_metrics(
     spike_history: Optional[np.ndarray],
     out_dir: Path,
 ) -> None:
+    import matplotlib
+
+    matplotlib.use("Agg", force=True)
+    import matplotlib.pyplot as plt
+
     times = np.arange(len(logs["innovation"])) * dt
     fig, axes = plt.subplots(2, 1, figsize=(8, 6), sharex=True)
     axes[0].plot(times, logs["innovation"], label="||e||^2")
