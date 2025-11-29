@@ -16,6 +16,8 @@ python -m code.experiments.di_no_delay --K 2 --Q 1 --N 64 --dt 0.001 --T 10.0 --
 > - Artifacts land under `runs/<tag>_<timestamp>/` with `config.json`, `metrics.csv`, `metrics.png`, and `spikes.png`.
 > - Use `--no-plots` to skip matplotlib entirely, or `--record-spikes` to keep rasters when plotting is disabled.
 > - Spiking excitability is tunable via `--threshold`, `--bias-current`, `--innovation-gain`, and init scales (`--init-wy-scale`, `--init-g-scale`, `--init-v-std`).
+> - `state_traces.npz` contains both true and decoded states; `param_stats.json` records matrix norms for fast debugging.
+> - Use `--teacher-forced` (with Kalman enabled) to plug in analytic `C D` / `DᵀK_f` and verify the SCN substrate independently of learning.
 
 ## Plots & logs
 - CSV logs in `runs/…`

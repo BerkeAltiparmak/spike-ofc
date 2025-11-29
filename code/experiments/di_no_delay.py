@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import List, Optional
 
 import numpy as np
-from scipy import linalg as la
 
 from src.spikeOFC import baselines, config as cfg, delay, lti, loop, scn_core, spikeOFC_model
 
@@ -22,11 +21,17 @@ def _make_rng(seed: int):
     return default_rng(seed)
 
 
-def _stationary_kalman_gain(A_d: np.ndarray, C: np.ndarray, Q_d: np.ndarray, R: np.ndarray) -> np.ndarray:
-    """Solve discrete Riccati for steady-state Kalman gain."""
-    P = la.solve_discrete_are(A_d.T, C.T, Q_d, R)
-    S = C @ P @ C.T + R
-    return P @ C.T @ np.linalg.inv(S)
+def _stationary_kalman_gain(
+    A_d: np.ndarray, C: np.ndarray, Q_d: np.ndarray, R: np.ndarray, steps: int = 2000
+) -> np.ndarray:
+    """Iteratively converge to the steady-state Kalman gain."""
+    K = np.zeros((A_d.shape[0], C.shape[0]))
+    P = np.eye(A_d.shape[0])
+    for _ in range(steps):
+        S = C @ P @ C.T + R
+        K = P @ C.T @ np.linalg.inv(S)
+        P = A_d @ P @ A_d.T + Q_d - A_d @ P @ C.T @ np.linalg.inv(S) @ C @ P @ A_d.T
+    return K
 
 
 def build_components(run_cfg: cfg.RunConfig):
@@ -120,6 +125,22 @@ def _write_logs(logs: dict[str, list[float]], dt: float, out_dir: Path) -> None:
             writer.writerow(row)
 
 
+def _write_traces(decoded: Optional[np.ndarray], true: Optional[np.ndarray], out_dir: Path) -> None:
+    if decoded is None or true is None:
+        return
+    np.savez(out_dir / "state_traces.npz", x_hat=decoded, x_true=true)
+
+
+def _write_param_stats(model: spikeOFC_model.SpikeOFCModel, out_dir: Path) -> None:
+    stats = {
+        "Wy_fro": float(np.linalg.norm(model.params.W_y)),
+        "G_fro": float(np.linalg.norm(model.params.G)),
+        "Omega_s_fro": float(np.linalg.norm(model.params.Omega_s)),
+    }
+    with (out_dir / "param_stats.json").open("w") as f:
+        json.dump(stats, f, indent=2)
+
+
 def _plot_metrics(
     logs: dict[str, list[float]],
     dt: float,
@@ -171,12 +192,15 @@ def main():
     model, state, delay_line, plant, rng, baseline = build_components(run_cfg)
     out_dir = _prepare_run_dir(run_cfg)
     _write_config(run_cfg, out_dir)
+    eta_wy = 0.0 if run_cfg.teacher_forced else run_cfg.eta_wy
+    eta_g = 0.0 if run_cfg.teacher_forced else run_cfg.eta_g
+    eta_omega_s = 0.0 if run_cfg.teacher_forced else run_cfg.eta_omega_s
     sim_cfg = loop.SimulationConfig(
         dt=run_cfg.dt,
         T=run_cfg.T,
-        eta_wy=run_cfg.eta_wy,
-        eta_g=run_cfg.eta_g,
-        eta_omega_s=run_cfg.eta_omega_s,
+        eta_wy=eta_wy,
+        eta_g=eta_g,
+        eta_omega_s=eta_omega_s,
         record_spikes=run_cfg.record_spikes or run_cfg.make_plots,
         threshold=run_cfg.threshold,
         v_reset=run_cfg.v_reset,
@@ -193,6 +217,8 @@ def main():
     )
     logs = outputs.logs
     _write_logs(logs, run_cfg.dt, out_dir)
+    _write_traces(outputs.decoded_history, outputs.true_history, out_dir)
+    _write_param_stats(model, out_dir)
     if run_cfg.make_plots:
         _plot_metrics(logs, run_cfg.dt, outputs.spike_history, out_dir)
     print("Simulation completed.")
