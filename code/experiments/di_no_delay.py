@@ -48,6 +48,8 @@ def build_components(run_cfg: cfg.RunConfig):
         if scales.size != run_cfg.K:
             raise ValueError(f"Expected {run_cfg.K} decoder scales, got {scales.size}")
         D = D * scales[:, None]
+    if run_cfg.bounding_box > 0:
+        D = D / run_cfg.bounding_box
     Omega_f = scn_core.fast_matrix(D)
     plant = lti.make_double_integrator(
         dt=run_cfg.dt,

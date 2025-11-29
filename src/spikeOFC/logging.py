@@ -17,5 +17,7 @@ def state_mse(x_hat: Array, x_true: Array) -> float:
 
 
 def firing_rate(spikes: Array, dt: float) -> float:
-    return float(np.sum(spikes) / (spikes.size * dt))
+    """Compute average firing rate (spikes/sec) ignoring spike amplitude."""
+    counts = np.count_nonzero(spikes)
+    return float(counts / (spikes.size * dt))
 

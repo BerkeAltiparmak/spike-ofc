@@ -30,15 +30,21 @@
   - `decoder_scale=5` keeps variance <0.5 regardless of gain.
 - We are getting closer to the desired variance ratios but still fall short of unity, especially for the second dimension; additional targeted scaling or per-dimension decoder tuning is needed.
 - Row-wise scaling experiments (`tf_row_scale*`):
-  - Scaling row 2 up by 3–4× while shrinking row 1 (`decoder_scale=10`, `decoder_scales=[0.5, 3]`) brought dim2 variance near 1 (`var ratio ≈ 1.08`) but blew up dim1 (`≈6.7`), increasing RMSE to ~0.017.
-  - With larger row scaling (`decoder_scales=[1,4]`) dim2 variance hits ≈0.95 while dim1 skyrockets (>11), confirming we need a more principled way to balance rows rather than manual guessing.
+  - Scaling row 2 up by 3–4× while shrinking row 1 (`decoder_scale=10`, `decoder_scales=[0.5, 3]`) brought dim2 variance near 1 (`≈1.08`) but blew up dim1 (`≈6.7`), raising RMSE to ~1.7e-2.
+  - Larger row scaling (`[1,4]`) drives dim2 to ≈0.95 but dim1 >11, so manual tweaks aren’t stable.
+- Reference code review revealed two critical differences vs. our implementation:
+  - SCN spikes have amplitude `1/dt` and only one neuron fires per dt. We adopted this (see `spike_step`) and changed firing-rate logging accordingly.
+  - The SCN decoder is divided by a `bounding_box_factor` (default 10) to limit discontinuities and set per-neuron thresholds `T = diag(DᵀD)/2`. We added `--bounding-box` (default 10), but thresholds are still global; the next change is to derive thresholds from `D`.
+- After adopting the SCN spike amplitude and a bounding box of 100 (`tf_bbox100_20251129-032837`), variance ratios improved to `[0.76, 0.45]` (closer to unity) without blowing up dim0—confirming we now need finer scaling (per-row and per-neuron thresholds) rather than guessing global gains.
 - Conclusion: scaling the decoder helps, but we still need additional gain (likely per-dimension scaling of D or a larger innovation gain) to match the Kalman trajectory before we can trust learning runs.
 
 ## Next steps
-1. **Automate decoder scaling search (still teacher-forced)**
-   - Implement a small optimizer (grid/Optuna) that adjusts per-row scales based on the measured `var(x̂)/var(x)` (e.g., target ratio 1 by updating row scales multiplicatively).
-   - Keep exploring the `decoder_scale≈10`, `innovation_gain=40–60` regime, but adjust row scalings so both dims land near unity without exploding RMSE.
-   - Consider hybrid decoders (identity basis plus random columns) to control variance better.
+1. **Finish aligning with SCN substrate**
+   - Derive thresholds from `T = diag(DᵀD)/2` instead of a global constant so spike resets match the reference implementation.
+   - Keep the bounding-box parameter (100 worked best so far) and expose it via the CLI for sweeps.
+2. **Automate decoder scaling search (still teacher-forced)**
+   - Implement a small optimizer (grid/Optuna) that adjusts per-row scales to drive `var(x̂)/var(x)` toward 1 (e.g., multiplicative updates using the measured ratios).
+   - Work around the promising configuration (`decoder_scale=10`, `bounding_box≈100`, `innovation_gain≈40`) and refine per-row scalings to balance both dimensions.
 2. **Monitor diagnostics each run**
    - `state_traces.png`, variance ratios, `r_norm`, `Ge_norm`, and firing rates help ensure we’re not saturating or quiescent.
 3. **Once teacher-forced matches Kalman**

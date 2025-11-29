@@ -39,12 +39,15 @@ def spike_step(
     threshold: float = 1.0,
     v_reset: float = 0.0,
 ) -> Tuple[Array, SpikingState]:
-    """Single Euler step of LIF dynamics with filtered spikes."""
+    """Single Euler step inspired by SCN dynamics (at most one spike per dt)."""
     dv = (-lambda_ * state.v + input_current) * dt
     v_new = state.v + dv
-    spikes = (v_new >= threshold).astype(float)
-    # Reset voltages where spikes occurred
-    v_new = np.where(spikes > 0.0, v_reset, v_new)
+    spikes = np.zeros_like(state.v)
+    above = np.where(v_new >= threshold)[0]
+    if above.size > 0:
+        spike_idx = above[np.argmax(v_new[above])]
+        spikes[spike_idx] = 1.0 / dt  # Dirac-like pulse
+        v_new[spike_idx] = v_reset
     dr = (-lambda_ * state.r + spikes) * dt
     r_new = state.r + dr
     return spikes, SpikingState(v=v_new, r=r_new)

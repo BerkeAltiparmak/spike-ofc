@@ -38,6 +38,7 @@ class RunConfig:
     decoder_scale: float
     decoder_scales: Optional[str]
     decoder_basis: str
+    bounding_box: float
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
@@ -75,6 +76,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
         choices=["random", "identity"],
         default="random",
         help="Decoder basis initialization (identity requires N>=K).",
+    )
+    parser.add_argument(
+        "--bounding-box",
+        type=float,
+        default=10.0,
+        help="Divide decoder columns by this factor (mirrors SCN bounding box).",
     )
     parser.add_argument("--run-dir", type=str, default="runs", help="Directory to store logs/plots.")
     parser.add_argument("--tag", type=str, default=None, help="Optional tag for the run folder.")
@@ -124,5 +131,6 @@ def parse_args(argv: list[str] | None = None) -> RunConfig:
         decoder_scale=args.decoder_scale,
         decoder_scales=args.decoder_scales,
         decoder_basis=args.decoder_basis,
+        bounding_box=args.bounding_box,
     )
 
