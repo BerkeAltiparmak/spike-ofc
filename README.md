@@ -1,4 +1,4 @@
-# Spike-OFC: Factorized Innovation Spike-Coding (Estimation Only)
+# Spike-OFC: Factorized Innovation Spike-Coding
 
 **Goal:** Build a **spiking**, **fully local-learning** estimator that fuses SCN (spike coding networks) with Bio-OFC (innovation-based local learning) and **handles measurement delay** cleanly.
 
